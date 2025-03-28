@@ -1,52 +1,45 @@
-# pages/analyse.py — version Streamlit avec tickers universels
 
 import streamlit as st
-import pandas as pd
 import yfinance as yf
-import plotly.graph_objects as go
+import pandas as pd
+import matplotlib.pyplot as plt
 import ta
 
 def run():
-    st.title("Analyse Technique 📊")
+    st.title("Analyse Technique Universelle")
+    st.write("📊 Sélectionne un actif (actions, crypto, forex...)")
 
-    tickers = {
-        "EUR/USD": "EURUSD=X",
-        "USD/JPY": "USDJPY=X",
-        "GBP/USD": "GBPUSD=X",
-        "BTC/USD": "BTC-USD",
-        "ETH/USD": "ETH-USD",
-        "Apple (AAPL)": "AAPL",
-        "Tesla (TSLA)": "TSLA",
-        "S&P 500": "^GSPC",
-        "CAC 40": "^FCHI"
+    symboles = {
+        "EUR/USD (Forex)": "EURUSD=X",
+        "Bitcoin (Crypto)": "BTC-USD",
+        "Apple (Action)": "AAPL",
+        "CAC 40 (Indice)": "^FCHI",
+        "Or (Gold)": "GC=F",
+        "USD/JPY (Forex)": "JPY=X",
+        "Ethereum (Crypto)": "ETH-USD"
     }
 
-    st.sidebar.subheader("Sélection du ticker")
-    choix = st.sidebar.selectbox("Choisissez un actif :", list(tickers.keys()))
-    symbol = tickers[choix]
+    actif = st.selectbox("Choisis un actif", list(symboles.keys()))
+    ticker = symboles[actif]
 
-    start = st.sidebar.date_input("Date de début", pd.to_datetime("2024-01-01"))
-    end = st.sidebar.date_input("Date de fin", pd.to_datetime("today"))
+    try:
+        data = yf.download(ticker, period="3mo", interval="1d")
+        if data.empty:
+            st.error("❌ Aucune donnée trouvée pour ce symbole.")
+            return
 
-    data = yf.download(symbol, start=start, end=end)
+        data["EMA20"] = ta.trend.EMAIndicator(close=data["Close"], window=20).ema_indicator()
+        data["RSI"] = ta.momentum.RSIIndicator(close=data["Close"], window=14).rsi()
 
-    if data.empty:
-        st.warning("Aucune donnée trouvée pour ce ticker.")
-        return
+        st.write(f"### Données de {actif}")
+        st.line_chart(data[["Close", "EMA20"]])
 
-    st.subheader(f"Graphique de {symbol}")
-    fig = go.Figure(data=[go.Candlestick(
-        x=data.index,
-        open=data['Open'],
-        high=data['High'],
-        low=data['Low'],
-        close=data['Close']
-    )])
-    st.plotly_chart(fig, use_container_width=True)
+        st.write("### RSI")
+        fig, ax = plt.subplots()
+        ax.plot(data["RSI"])
+        ax.axhline(70, color='red', linestyle='--')
+        ax.axhline(30, color='green', linestyle='--')
+        st.pyplot(fig)
 
-    st.subheader("Indicateurs techniques")
-    data["EMA20"] = ta.trend.ema_indicator(data["Close"], window=20)
-    data["RSI"] = ta.momentum.RSIIndicator(data["Close"]).rsi()
-
-    st.line_chart(data[["Close", "EMA20"]])
-    st.line_chart(data["RSI"])
+    except Exception as e:
+        st.error(f"Erreur lors du chargement ou de l'analyse : {e}")
