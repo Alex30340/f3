@@ -16,3 +16,5 @@ pages = {
 st.sidebar.title("Navigation")
 choix = st.sidebar.radio("Aller vers :", list(pages.keys()))
 pages[choix]()
+import os
+os.environ["PORT"] = "10000"
