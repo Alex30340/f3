@@ -1,8 +1,0 @@
-dash==3.0.1
-dash-bootstrap-components==2.0.0
-yfinance
-ta
-plotly
-pandas
-Flask
-requests
