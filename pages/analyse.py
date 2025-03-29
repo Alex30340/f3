@@ -26,17 +26,17 @@ def run():
             df = yf.download(symbole, period="3mo", interval="1d")
             df.dropna(inplace=True)
 
-            # ✅ Forcer les colonnes à être plates (1D Series)
+            # 🔧 Forcer les colonnes à être plates (1D)
             for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-                df[col] = df[col].astype(float).squeeze()
+                df[col] = pd.Series(df[col].values.ravel(), index=df.index)
 
-            # ✅ Ajout indicateurs techniques
+            # 📉 Indicateurs techniques
             df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
             macd = ta.trend.MACD(close=df['Close'])
             df['MACD'] = macd.macd()
             df['Signal'] = macd.macd_signal()
 
-            # ✅ Graphique type TradingView (bougies)
+            # 📊 Bougies japonaises
             fig = go.Figure(data=[
                 go.Candlestick(
                     x=df.index,
@@ -48,14 +48,11 @@ def run():
                 )
             ])
             fig.update_layout(title=f"Graphique de {choix}", xaxis_title="Date", yaxis_title="Prix")
-
             st.plotly_chart(fig, use_container_width=True)
 
-            # ✅ RSI & MACD
+            # ➕ RSI et MACD
             st.subheader("📈 Indicateurs Techniques")
-
             col1, col2 = st.columns(2)
-
             with col1:
                 st.line_chart(df[['RSI']].dropna(), use_container_width=True)
             with col2:
