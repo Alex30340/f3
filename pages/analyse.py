@@ -45,21 +45,12 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            # Indicateurs techniques correctement squeezés
-            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
-            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
-
-            macd_calc = ta.trend.MACD(close=df['Close'])
-            df['MACD'] = macd_calc.macd()
-            df['MACD_signal'] = macd_calc.macd_signal()
-            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
-
-            # Conversion en séries 1D (si nécessaire)
-            df['EMA20'] = df['EMA20'].squeeze()
-            df['EMA50'] = df['EMA50'].squeeze()
-            df['MACD'] = df['MACD'].squeeze()
-            df['MACD_signal'] = df['MACD_signal'].squeeze()
-            df['RSI'] = df['RSI'].squeeze()
+            # Indicateurs techniques corrigés
+            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator().values.flatten()
+            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator().values.flatten()
+            df['MACD'] = ta.trend.MACD(close=df['Close']).macd().values.flatten()
+            df['MACD_signal'] = ta.trend.MACD(close=df['Close']).macd_signal().values.flatten()
+            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi().values.flatten()
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
@@ -83,6 +74,7 @@ def run():
             for r in resistance_lines:
                 fig.add_hline(y=r[1], line_dash="dot", line_color="red", annotation_text="Résistance")
 
+            # Take Profit / Stop Loss
             last_price = df['Close'].iloc[-1]
             tp = round(last_price * 1.05, 2)
             sl = round(last_price * 0.95, 2)
@@ -100,8 +92,8 @@ def run():
 
             st.markdown("### 🔎 Indicateurs")
             col1, col2 = st.columns(2)
-            col1.metric("RSI", f"{df['RSI'].iloc[-1]:.2f}")
-            col2.metric("MACD", f"{df['MACD'].iloc[-1]:.2f}")
+            col1.metric("RSI", f"{df['RSI'][-1]:.2f}")
+            col2.metric("MACD", f"{df['MACD'][-1]:.2f}")
 
         except Exception as e:
             st.error(f"❌ Une erreur est survenue : {e}")
