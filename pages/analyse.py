@@ -45,12 +45,20 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            # Indicateurs techniques corrigés
-            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator().values.flatten()
-            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator().values.flatten()
-            df['MACD'] = ta.trend.MACD(close=df['Close']).macd().values.flatten()
-            df['MACD_signal'] = ta.trend.MACD(close=df['Close']).macd_signal().values.flatten()
-            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi().values.flatten()
+            # Indicateurs techniques corrigés (avec flatten si nécessaire)
+            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
+            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
+            
+            macd_obj = ta.trend.MACD(close=df['Close'])
+            df['MACD'] = macd_obj.macd()
+            df['MACD_signal'] = macd_obj.macd_signal()
+            
+            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
+
+            # Aplatir les colonnes si nécessaire
+            for col in ['EMA20', 'EMA50', 'MACD', 'MACD_signal', 'RSI']:
+                if df[col].ndim > 1:
+                    df[col] = df[col].squeeze()
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
@@ -92,8 +100,8 @@ def run():
 
             st.markdown("### 🔎 Indicateurs")
             col1, col2 = st.columns(2)
-            col1.metric("RSI", f"{df['RSI'][-1]:.2f}")
-            col2.metric("MACD", f"{df['MACD'][-1]:.2f}")
+            col1.metric("RSI", f"{df['RSI'].iloc[-1]:.2f}")
+            col2.metric("MACD", f"{df['MACD'].iloc[-1]:.2f}")
 
         except Exception as e:
             st.error(f"❌ Une erreur est survenue : {e}")
