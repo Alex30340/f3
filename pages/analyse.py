@@ -1,62 +1,48 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
-from ta.trend import MACD
-
-
-# Dictionnaire des actifs disponibles
-assets = {
-    "Bitcoin (Crypto)": "BTC-USD",
-    "Ethereum (Crypto)": "ETH-USD",
-    "EUR/USD (Forex)": "EURUSD=X",
-    "USD/JPY (Forex)": "JPY=X",
-    "Tesla (Action)": "TSLA",
-    "Apple (Action)": "AAPL"
-}
+import altair as alt
 
 def run():
+    st.set_page_config(page_title="Analyse Technique", layout="wide")
     st.title("📊 Analyse Technique Universelle")
     st.markdown("✅ **Sélectionne un actif** *(actions, crypto, forex...)*")
 
-    actif = st.selectbox("Choisis un actif", list(assets.keys()))
-    ticker = assets[actif]
+    actifs = {
+        "Bitcoin (Crypto)": "BTC-USD",
+        "Ethereum (Crypto)": "ETH-USD",
+        "EUR/USD (Forex)": "EURUSD=X",
+        "USD/JPY (Forex)": "JPY=X",
+        "Tesla (Action)": "TSLA"
+    }
+
+    choix = st.selectbox("Choisis un actif", list(actifs.keys()))
+    symbole = actifs[choix]
 
     if st.button("Analyser"):
         try:
-            df = yf.download(ticker, period="3mo", interval="1d")
+            data = yf.download(symbole, period="3mo", interval="1d")
+            data = data.dropna()
 
-            if df.empty:
-                st.error("Aucune donnée disponible pour cet actif.")
+            if data.empty:
+                st.warning("Aucune donnée récupérée pour cet actif.")
                 return
 
-            df.dropna(inplace=True)
-            df.reset_index(inplace=True)
+            data.reset_index(inplace=True)
 
-            # Affichage du graphique en chandeliers (TradingView-style)
-            fig = go.Figure(data=[go.Candlestick(
-                x=df['Date'],
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close'],
-                name="Prix"
-            )])
-            fig.update_layout(title=f"📈 Données de {actif}", xaxis_rangeslider_visible=False)
+            # 🛠️ S'assurer que les données sont bien plates (1D)
+            data['Close'] = data['Close'].astype(float)
 
-            st.plotly_chart(fig, use_container_width=True)
+            # 📈 Graphique type TradingView simple (bougie possible après)
+            chart = alt.Chart(data).mark_line().encode(
+                x=alt.X('Date:T', title='Date'),
+                y=alt.Y('Close:Q', title='Prix de clôture')
+            ).properties(
+                title=f"Données de {choix}",
+                width='container'
+            )
 
-            # --- Analyse technique : MACD ---
-            macd = MACD(close=df['Close'])
-            df['MACD'] = macd.macd()
-            df['Signal'] = macd.macd_signal()
-
-            fig_macd = go.Figure()
-            fig_macd.add_trace(go.Scatter(x=df['Date'], y=df['MACD'], mode='lines', name='MACD'))
-            fig_macd.add_trace(go.Scatter(x=df['Date'], y=df['Signal'], mode='lines', name='Signal'))
-            fig_macd.update_layout(title="📊 MACD", xaxis_title="Date", yaxis_title="Valeur")
-
-            st.plotly_chart(fig_macd, use_container_width=True)
+            st.altair_chart(chart, use_container_width=True)
 
         except Exception as e:
             st.error(f"Erreur lors de l'analyse : {e}")
