@@ -1,58 +1,64 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import ta
+from ta.trend import MACD
+from ta.momentum import RSIIndicator
+from ta.volatility import BollingerBands
 
 def run():
     st.title("📊 Analyse Technique Universelle")
-
-    st.markdown("**📈 Sélectionne un actif (actions, crypto, forex...)**")
+    st.markdown("**✅ Sélectionne un actif (actions, crypto, forex...)**")
 
     actifs = {
         "Bitcoin (Crypto)": "BTC-USD",
         "Ethereum (Crypto)": "ETH-USD",
         "EUR/USD (Forex)": "EURUSD=X",
-        "Apple (Action)": "AAPL",
-        "Tesla (Action)": "TSLA",
-        "CAC 40 (Indice)": "^FCHI"
+        "Apple (Stock)": "AAPL",
+        "Tesla (Stock)": "TSLA"
     }
 
-    actif_choisi = st.selectbox("Choisis un actif", list(actifs.keys()))
-    symbole = actifs[actif_choisi]
+    choix = st.selectbox("Choisis un actif", list(actifs.keys()))
 
     try:
-        df = yf.download(symbole, period="3mo", interval="1d")
-        if df.empty:
-            st.error("❌ Aucune donnée disponible pour cet actif.")
-            return
-
-        # Nettoyage & indicateurs
+        ticker = actifs[choix]
+        df = yf.download(ticker, period="3mo", interval="1d")
         df.dropna(inplace=True)
-        df['SMA20'] = ta.trend.sma_indicator(df['Close'], window=20)
-        df['RSI'] = ta.momentum.RSIIndicator(df['Close'], window=14).rsi()
 
-        st.subheader(f"📉 Graphique de {actif_choisi}")
+        st.write(f"### Données de {choix}")
+        st.line_chart(df["Close"])
 
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(df.index, df['Close'].values.ravel(), label="Prix de clôture")
-        ax.plot(df.index, df['SMA20'].values.ravel(), label="SMA 20j")
-        ax.set_title(f"Prix & Moyenne Mobile - {actif_choisi}")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Prix")
+        # Correction ici : s'assurer que les données sont en 1D
+        close = df["Close"]
+
+        # MACD
+        macd = MACD(close=close).macd()
+        signal = MACD(close=close).macd_signal()
+
+        # RSI
+        rsi = RSIIndicator(close=close).rsi()
+
+        # Bollinger
+        bollinger = BollingerBands(close=close)
+        bb_high = bollinger.bollinger_hband()
+        bb_low = bollinger.bollinger_lband()
+
+        st.write("### Indicateurs Techniques")
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(df.index, close, label="Prix de clôture")
+        ax.plot(df.index, bb_high, label="Bollinger High", linestyle="--")
+        ax.plot(df.index, bb_low, label="Bollinger Low", linestyle="--")
+        ax.set_title("Bollinger Bands")
         ax.legend()
         st.pyplot(fig)
 
-        st.subheader("📍 Indicateur RSI")
+        st.write("#### MACD")
+        st.line_chart(pd.DataFrame({"MACD": macd, "Signal": signal}, index=df.index))
 
-        fig2, ax2 = plt.subplots(figsize=(12, 2))
-        ax2.plot(df.index, df['RSI'].values.ravel(), color='orange', label="RSI")
-        ax2.axhline(70, color='red', linestyle='--', label="Suracheté (70)")
-        ax2.axhline(30, color='green', linestyle='--', label="Survendu (30)")
-        ax2.set_title("Indice de Force Relative (RSI)")
-        ax2.set_ylim([0, 100])
-        ax2.legend()
-        st.pyplot(fig2)
+        st.write("#### RSI")
+        st.line_chart(pd.DataFrame({"RSI": rsi}, index=df.index))
 
     except Exception as e:
         st.error(f"❌ Erreur lors du chargement ou de l'analyse : {e}")
