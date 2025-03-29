@@ -25,14 +25,14 @@ def run():
             df.dropna(inplace=True)
 
             # Calcul des indicateurs
-            df["EMA20"] = ta.trend.ema_indicator(df["Close"], window=20)
-            df["EMA50"] = ta.trend.ema_indicator(df["Close"], window=50)
+            df["EMA20"] = ta.trend.ema_indicator(df["Close"].squeeze(), window=20)
+            df["EMA50"] = ta.trend.ema_indicator(df["Close"].squeeze(), window=50)
 
-            macd = ta.trend.macd(df["Close"])
+            macd = ta.trend.macd(df["Close"].squeeze())
             df["MACD"] = macd.macd()
             df["MACD_SIGNAL"] = macd.macd_signal()
 
-            df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
+            df["RSI"] = ta.momentum.RSIIndicator(df["Close"].squeeze()).rsi()
 
             # Détection des supports/résistances
             supports = df["Low"].rolling(window=5).min()
@@ -43,18 +43,16 @@ def run():
 
             fig.add_trace(go.Candlestick(
                 x=df.index,
-                open=df["Open"],
-                high=df["High"],
-                low=df["Low"],
-                close=df["Close"],
+                open=df["Open"].squeeze(),
+                high=df["High"].squeeze(),
+                low=df["Low"].squeeze(),
+                close=df["Close"].squeeze(),
                 name="Prix",
             ))
 
-            # Lignes EMA
             fig.add_trace(go.Scatter(x=df.index, y=df["EMA20"], mode="lines", name="EMA 20"))
             fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], mode="lines", name="EMA 50"))
 
-            # Supports & résistances (simplifiés)
             fig.add_trace(go.Scatter(x=df.index, y=supports, mode="lines", name="Support", line=dict(dash="dot")))
             fig.add_trace(go.Scatter(x=df.index, y=resistances, mode="lines", name="Résistance", line=dict(dash="dot")))
 
@@ -67,17 +65,16 @@ def run():
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Indicateurs additionnels
             with st.expander("📈 Indicateurs techniques"):
                 col1, col2 = st.columns(2)
 
                 with col1:
                     st.subheader("RSI")
-                    st.line_chart(df["RSI"])
+                    st.line_chart(df["RSI"].squeeze())
 
                 with col2:
                     st.subheader("MACD")
-                    st.line_chart(df[["MACD", "MACD_SIGNAL"]])
+                    st.line_chart(df[["MACD", "MACD_SIGNAL"]].squeeze())
 
         except Exception as e:
             st.error(f"Erreur lors de l'analyse : {e}")
