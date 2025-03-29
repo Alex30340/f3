@@ -45,13 +45,21 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            # Indicateurs techniques (avec .squeeze() pour éviter l'erreur)
-            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator().squeeze()
-            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator().squeeze()
-            macd = ta.trend.MACD(close=df['Close'])
-            df['MACD'] = macd.macd().squeeze()
-            df['MACD_signal'] = macd.macd_signal().squeeze()
-            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi().squeeze()
+            # Indicateurs techniques correctement squeezés
+            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
+            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
+
+            macd_calc = ta.trend.MACD(close=df['Close'])
+            df['MACD'] = macd_calc.macd()
+            df['MACD_signal'] = macd_calc.macd_signal()
+            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
+
+            # Conversion en séries 1D (si nécessaire)
+            df['EMA20'] = df['EMA20'].squeeze()
+            df['EMA50'] = df['EMA50'].squeeze()
+            df['MACD'] = df['MACD'].squeeze()
+            df['MACD_signal'] = df['MACD_signal'].squeeze()
+            df['RSI'] = df['RSI'].squeeze()
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
@@ -75,7 +83,6 @@ def run():
             for r in resistance_lines:
                 fig.add_hline(y=r[1], line_dash="dot", line_color="red", annotation_text="Résistance")
 
-            # Take Profit / Stop Loss
             last_price = df['Close'].iloc[-1]
             tp = round(last_price * 1.05, 2)
             sl = round(last_price * 0.95, 2)
