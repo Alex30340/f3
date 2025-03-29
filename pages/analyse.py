@@ -47,12 +47,14 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            df['EMA20'] = ta.trend.ema_indicator(df['Close'], window=20)
-            df['EMA50'] = ta.trend.ema_indicator(df['Close'], window=50)
-            macd = ta.trend.macd(df['Close'])
+            # Indicateurs techniques
+            df['EMA20'] = ta.trend.ema_indicator(close=df['Close'], window=20).ema_indicator()
+            df['EMA50'] = ta.trend.ema_indicator(close=df['Close'], window=50).ema_indicator()
+
+            macd = ta.trend.MACD(close=df['Close'])
             df['MACD'] = macd.macd()
             df['MACD_signal'] = macd.macd_signal()
-            df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi()
+            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
@@ -67,8 +69,8 @@ def run():
                 name='Bougies'
             ))
 
-            fig.add_trace(go.Scatter(x=df.index, y=df['EMA20'], mode='lines', name='EMA20'))
-            fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'], mode='lines', name='EMA50'))
+            fig.add_trace(go.Scatter(x=df.index, y=df['EMA20'], mode='lines', name='EMA 20'))
+            fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'], mode='lines', name='EMA 50'))
 
             for s in support_lines:
                 fig.add_hline(y=s[1], line_dash="dot", line_color="green", annotation_text="Support")
@@ -76,7 +78,7 @@ def run():
             for r in resistance_lines:
                 fig.add_hline(y=r[1], line_dash="dot", line_color="red", annotation_text="Résistance")
 
-            # TP/SL fictifs à partir du dernier prix
+            # Take Profit / Stop Loss
             last_price = df['Close'].iloc[-1]
             tp = round(last_price * 1.05, 2)
             sl = round(last_price * 0.95, 2)
@@ -94,8 +96,8 @@ def run():
 
             st.markdown("### 🔎 Indicateurs")
             col1, col2 = st.columns(2)
-            col1.metric("RSI", round(df['RSI'].iloc[-1], 2))
-            col2.metric("MACD", round(df['MACD'].iloc[-1], 2))
+            col1.metric("RSI", f"{df['RSI'].iloc[-1]:.2f}")
+            col2.metric("MACD", f"{df['MACD'].iloc[-1]:.2f}")
 
         except Exception as e:
-            st.error(f"Erreur : {e}")
+            st.error(f"❌ Une erreur est survenue : {e}")
