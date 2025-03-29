@@ -45,20 +45,13 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            # Indicateurs techniques corrigés (avec flatten si nécessaire)
-            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
-            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
-            
+            # Conversion explicite des indicateurs en Series 1D
+            df['EMA20'] = pd.Series(ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator().squeeze(), index=df.index)
+            df['EMA50'] = pd.Series(ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator().squeeze(), index=df.index)
             macd_obj = ta.trend.MACD(close=df['Close'])
-            df['MACD'] = macd_obj.macd()
-            df['MACD_signal'] = macd_obj.macd_signal()
-            
-            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
-
-            # Aplatir les colonnes si nécessaire
-            for col in ['EMA20', 'EMA50', 'MACD', 'MACD_signal', 'RSI']:
-                if df[col].ndim > 1:
-                    df[col] = df[col].squeeze()
+            df['MACD'] = pd.Series(macd_obj.macd().squeeze(), index=df.index)
+            df['MACD_signal'] = pd.Series(macd_obj.macd_signal().squeeze(), index=df.index)
+            df['RSI'] = pd.Series(ta.momentum.RSIIndicator(close=df['Close']).rsi().squeeze(), index=df.index)
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
@@ -78,11 +71,9 @@ def run():
 
             for s in support_lines:
                 fig.add_hline(y=s[1], line_dash="dot", line_color="green", annotation_text="Support")
-
             for r in resistance_lines:
                 fig.add_hline(y=r[1], line_dash="dot", line_color="red", annotation_text="Résistance")
 
-            # Take Profit / Stop Loss
             last_price = df['Close'].iloc[-1]
             tp = round(last_price * 1.05, 2)
             sl = round(last_price * 0.95, 2)
