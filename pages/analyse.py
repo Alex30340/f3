@@ -4,8 +4,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from ta.trend import MACD
 
-# Doit être la première commande Streamlit
-st.set_page_config(page_title="Analyse Technique", layout="wide")
 
 # Dictionnaire des actifs disponibles
 assets = {
