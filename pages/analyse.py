@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import ta
 
-st.set_page_config(page_title="Analyse Technique", layout="wide")
+
 
 def detect_support_resistance(df, window=5):
     support = []
