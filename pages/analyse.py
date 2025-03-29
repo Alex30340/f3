@@ -1,64 +1,83 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from ta.trend import MACD
-from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands
+import plotly.graph_objects as go
+import ta
 
 def run():
     st.title("📊 Analyse Technique Universelle")
-    st.markdown("**✅ Sélectionne un actif (actions, crypto, forex...)**")
+    st.markdown("✅ **Sélectionne un actif** (actions, crypto, forex...)")
 
     actifs = {
         "Bitcoin (Crypto)": "BTC-USD",
         "Ethereum (Crypto)": "ETH-USD",
+        "Apple (Action)": "AAPL",
         "EUR/USD (Forex)": "EURUSD=X",
-        "Apple (Stock)": "AAPL",
-        "Tesla (Stock)": "TSLA"
+        "Gold (Matière Première)": "GC=F"
     }
 
     choix = st.selectbox("Choisis un actif", list(actifs.keys()))
+    ticker = actifs[choix]
 
-    try:
-        ticker = actifs[choix]
-        df = yf.download(ticker, period="3mo", interval="1d")
-        df.dropna(inplace=True)
+    if st.button("Analyser"):
+        try:
+            df = yf.download(ticker, period="3mo", interval="1d")
+            df.dropna(inplace=True)
 
-        st.write(f"### Données de {choix}")
-        st.line_chart(df["Close"])
+            # Calcul des indicateurs
+            df["EMA20"] = ta.trend.ema_indicator(df["Close"], window=20)
+            df["EMA50"] = ta.trend.ema_indicator(df["Close"], window=50)
 
-        # Correction ici : s'assurer que les données sont en 1D
-        close = df["Close"]
+            macd = ta.trend.macd(df["Close"])
+            df["MACD"] = macd.macd()
+            df["MACD_SIGNAL"] = macd.macd_signal()
 
-        # MACD
-        macd = MACD(close=close).macd()
-        signal = MACD(close=close).macd_signal()
+            df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
 
-        # RSI
-        rsi = RSIIndicator(close=close).rsi()
+            # Détection des supports/résistances
+            supports = df["Low"].rolling(window=5).min()
+            resistances = df["High"].rolling(window=5).max()
 
-        # Bollinger
-        bollinger = BollingerBands(close=close)
-        bb_high = bollinger.bollinger_hband()
-        bb_low = bollinger.bollinger_lband()
+            # Graphique en bougies japonaises avec Plotly
+            fig = go.Figure()
 
-        st.write("### Indicateurs Techniques")
+            fig.add_trace(go.Candlestick(
+                x=df.index,
+                open=df["Open"],
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                name="Prix",
+            ))
 
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(df.index, close, label="Prix de clôture")
-        ax.plot(df.index, bb_high, label="Bollinger High", linestyle="--")
-        ax.plot(df.index, bb_low, label="Bollinger Low", linestyle="--")
-        ax.set_title("Bollinger Bands")
-        ax.legend()
-        st.pyplot(fig)
+            # Lignes EMA
+            fig.add_trace(go.Scatter(x=df.index, y=df["EMA20"], mode="lines", name="EMA 20"))
+            fig.add_trace(go.Scatter(x=df.index, y=df["EMA50"], mode="lines", name="EMA 50"))
 
-        st.write("#### MACD")
-        st.line_chart(pd.DataFrame({"MACD": macd, "Signal": signal}, index=df.index))
+            # Supports & résistances (simplifiés)
+            fig.add_trace(go.Scatter(x=df.index, y=supports, mode="lines", name="Support", line=dict(dash="dot")))
+            fig.add_trace(go.Scatter(x=df.index, y=resistances, mode="lines", name="Résistance", line=dict(dash="dot")))
 
-        st.write("#### RSI")
-        st.line_chart(pd.DataFrame({"RSI": rsi}, index=df.index))
+            fig.update_layout(
+                title=f"Données de {choix}",
+                xaxis_rangeslider_visible=False,
+                template="plotly_white",
+                height=600
+            )
 
-    except Exception as e:
-        st.error(f"❌ Erreur lors du chargement ou de l'analyse : {e}")
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Indicateurs additionnels
+            with st.expander("📈 Indicateurs techniques"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.subheader("RSI")
+                    st.line_chart(df["RSI"])
+
+                with col2:
+                    st.subheader("MACD")
+                    st.line_chart(df[["MACD", "MACD_SIGNAL"]])
+
+        except Exception as e:
+            st.error(f"Erreur lors de l'analyse : {e}")
