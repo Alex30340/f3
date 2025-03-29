@@ -26,9 +26,9 @@ def run():
             df = yf.download(symbole, period="3mo", interval="1d")
             df.dropna(inplace=True)
 
-            # 🔧 Forcer les colonnes à être plates (1D)
+            # 🔧 Forcer les colonnes à être 1D
             for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-                df[col] = pd.Series(df[col].values.ravel(), index=df.index)
+                df[col] = pd.Series(df[col].values.flatten(), index=df.index)
 
             # 📉 Indicateurs techniques
             df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
