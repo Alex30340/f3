@@ -4,8 +4,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import ta
 
-
-
 def detect_support_resistance(df, window=5):
     support = []
     resistance = []
@@ -47,14 +45,13 @@ def run():
                 st.error("Aucune donnée disponible.")
                 return
 
-            # Indicateurs techniques
-            df['EMA20'] = ta.trend.ema_indicator(close=df['Close'], window=20).ema_indicator()
-            df['EMA50'] = ta.trend.ema_indicator(close=df['Close'], window=50).ema_indicator()
-
+            # Indicateurs techniques (avec .squeeze() pour éviter l'erreur)
+            df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator().squeeze()
+            df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator().squeeze()
             macd = ta.trend.MACD(close=df['Close'])
-            df['MACD'] = macd.macd()
-            df['MACD_signal'] = macd.macd_signal()
-            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi()
+            df['MACD'] = macd.macd().squeeze()
+            df['MACD_signal'] = macd.macd_signal().squeeze()
+            df['RSI'] = ta.momentum.RSIIndicator(close=df['Close']).rsi().squeeze()
 
             support_lines, resistance_lines = detect_support_resistance(df)
 
